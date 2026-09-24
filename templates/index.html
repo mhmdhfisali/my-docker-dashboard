@@ -1,0 +1,1085 @@
+<!doctype html>
+<html lang="id" class="dark">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Docker Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: "#0b0f17",
+                    },
+                },
+            },
+        };
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+         ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+         ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+         ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        /* Class Card & Inner untuk Light / Dark Mode */
+
+        .card {
+            @apply bg-white dark: bg-slate-900/80 border border-slate-200 dark: border-slate-800/80 shadow-sm transition-all rounded-2xl;
+        }
+
+        .card-inner {
+            @apply bg-slate-50/80 dark: bg-slate-900/40 border border-slate-200/80 dark: border-slate-800/60 rounded-xl;
+        }
+
+        .app-input {
+            @apply bg-slate-100 dark: bg-slate-900 text-slate-900 dark: text-white border border-slate-300 dark: border-slate-700 placeholder-slate-400 dark: placeholder-slate-500 rounded-xl transition-all focus: outline-none focus: border-sky-500 dark: focus: border-sky-400;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-100 dark:bg-darkbg text-slate-800 dark:text-slate-100 min-h-screen font-sans antialiased p-4 md:p-8 transition-colors duration-200">
+    <div class="max-w-7xl mx-auto space-y-6">
+        <!-- Header Utama -->
+        <div class=" flex flex-col md:flex-row md:items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-5 gap-4">
+            <div class="flex items-center space-x-4">
+                <div class="w-12 h-12 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center shadow-sm">
+                    <i class="fa-brands fa-docker text-3xl text-sky-500 dark:text-sky-400 drop-shadow-[0_0_8px_rgba(56,189,248,0.3)]"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-black text-slate-900 dark:text-white tracking-wide flex items-center gap-2">
+                        Docker Dashboard
+                    </h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                        Multi-Stack Control & Per-Project GitHub Integration
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-3">
+                <button onclick="toggleTheme()" class="p-2.5 card hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition active:scale-95 flex items-center justify-center" title="Ubah Tema">
+                  <i
+                    id="theme-icon"
+                    class="fa-solid fa-moon text-amber-500 text-sm"
+                  ></i>
+                </button>
+
+                <div class="flex items-center space-x-2 card px-3 py-2 text-slate-700 dark:text-slate-300">
+                    <span class="text-[11px] font-medium">Auto-Refresh</span>
+                    <input type="checkbox" id="auto-refresh-toggle" checked onchange="toggleAutoRefresh()" class="accent-sky-500 cursor-pointer w-4 h-4" />
+                </div>
+
+                <button onclick="stopAll()" class="px-4 py-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold rounded-xl border border-rose-500/30 transition active:scale-95 flex items-center gap-2 shadow-sm">
+                  <i class="fa-solid fa-power-off"></i>
+                  <span>Stop All</span>
+                </button>
+
+                <button onclick="fetchStatus()" class="px-4 py-2.5 card hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold transition active:scale-95 flex items-center gap-2 text-slate-700 dark:text-slate-200">
+                  <i
+                    class="fa-solid fa-rotate-right text-sky-500 dark:text-sky-400"
+                  ></i>
+                  <span>Refresh</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="card p-4 flex items-center space-x-4">
+                <div class="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                    <i class="fa-solid fa-circle-play text-xl"></i>
+                </div>
+                <div>
+                    <p class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
+                        Running Containers
+                    </p>
+                    <h3 id="stat-running" class="text-2xl font-black text-slate-900 dark:text-white font-mono">
+                        0
+                    </h3>
+                </div>
+            </div>
+
+            <div class="card p-4 flex items-center space-x-4">
+                <div class="w-11 h-11 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-600 dark:text-sky-400 shrink-0">
+                    <i class="fa-solid fa-cubes text-xl"></i>
+                </div>
+                <div>
+                    <p class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
+                        Total Stacks
+                    </p>
+                    <h3 id="stat-stacks" class="text-2xl font-black text-slate-900 dark:text-white font-mono">
+                        0
+                    </h3>
+                </div>
+            </div>
+
+            <div class="card p-4 flex flex-col justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
+                        <i class="fa-solid fa-microchip text-base"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
+                            CPU Load
+                        </p>
+                        <h3 id="stat-cpu" class="text-lg font-black text-slate-900 dark:text-white font-mono">
+                            0.0%
+                        </h3>
+                    </div>
+                </div>
+                <div class="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-1.5 mt-2 overflow-hidden">
+                    <div id="cpu-bar" class="bg-purple-500 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="card p-4 flex flex-col justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                        <i class="fa-solid fa-memory text-base"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
+                            RAM Usage
+                        </p>
+                        <h3 id="stat-mem" class="text-xs font-bold text-slate-800 dark:text-slate-200 font-mono truncate max-w-[130px]">
+                            0 MB / 0 MB
+                        </h3>
+                    </div>
+                </div>
+                <div class="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-1.5 mt-2 overflow-hidden">
+                    <div id="ram-bar" class="bg-amber-500 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live GitHub Activity Status Banner -->
+        <div id="github-overview-card" class="card p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div class="flex items-center space-x-3.5">
+                <div class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-sky-500 dark:text-sky-400 shrink-0">
+                    <i class="fa-brands fa-github text-2xl"></i>
+                </div>
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <h4 class="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
+                            GitHub Active Hub
+                        </h4>
+                        <span id="gh-active-stack" class="px-2 py-0.5 text-[10px] font-mono bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 rounded-md font-bold">ALL PROJECTS</span
+                    >
+                  </div>
+                  <p
+                    id="gh-last-commit"
+                    class="text-xs text-slate-600 dark:text-slate-300 font-mono mt-0.5 truncate max-w-md"
+                  >
+                    Pilih stack untuk melihat status repository.
+                  </p>
+                </div>
+              </div>
+
+              <div
+                class="flex items-center space-x-3 w-full md:w-auto justify-end"
+              >
+                <span
+                  id="gh-last-date"
+                  class="text-[11px] font-mono text-slate-500 dark:text-slate-400 card-inner px-3 py-1.5 shrink-0"
+                  >Status: Idle</span
+                >
+                <button
+                  id="gh-manage-btn"
+                  onclick="openCurrentGitModal()"
+                  class="px-3.5 py-1.5 bg-sky-500 hover:bg-sky-400 text-white dark:text-slate-950 font-bold text-xs rounded-xl transition flex items-center gap-1.5 shrink-0 shadow-sm"
+                >
+                  <i class="fa-solid fa-code-branch"></i>
+                  <span>Kelola Git</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Quick Project Filter Chips -->
+                <div class="flex flex-col space-y-2">
+                    <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Quick Project Filter:</span
+              >
+              <div
+                id="quick-filter-chips"
+                class="flex flex-wrap items-center gap-2"
+              ></div>
+            </div>
+
+            <!-- SEARCH BAR & EXPAND ALL BUTTON (PERBAIKAN MODERN & DARK MODE) -->
+            <div class="flex flex-col sm:flex-row items-center gap-3 w-full">
+              <!-- Container Search Bar -->
+              <div
+                class="flex-1 w-full flex items-center rounded-2xl border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 focus-within:border-sky-500 dark:focus-within:border-sky-400 focus-within:ring-2 focus-within:ring-sky-500/20 transition-all duration-200 h-11 px-3.5 shadow-sm"
+              >
+                <!-- Search Icon -->
+                <i
+                  class="fa-solid fa-magnifying-glass text-xs text-slate-400 dark:text-slate-500 pr-2.5 shrink-0"
+                ></i>
+
+                <!-- Input Text -->
+                <input
+                  type="text"
+                  id="search-input"
+                  oninput="handleSearchInput()"
+                  placeholder="Cari stack atau container..."
+                  class="flex-1 bg-transparent text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 text-xs sm:text-sm font-semibold outline-none border-none p-0 focus:ring-0"
+                />
+
+                <!-- Clear Search Button -->
+                <button
+                  type="button"
+                  id="clear-search-btn"
+                  onclick="clearSearch()"
+                  class="hidden text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 transition-colors pl-2 shrink-0 focus:outline-none"
+                  title="Hapus Pencarian"
+                >
+                  <i class="fa-solid fa-circle-xmark text-sm"></i>
+                </button>
+              </div>
+
+              <!-- Expand / Collapse All Button -->
+              <button
+                type="button"
+                onclick="toggleExpandAll()"
+                class="w-full sm:w-auto card hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 px-5 h-11 text-xs font-bold transition active:scale-95 flex items-center justify-center gap-2 shrink-0 border border-slate-300 dark:border-slate-800"
+              >
+                <i
+                  id="expand-icon"
+                  class="fa-solid fa-up-down text-xs text-sky-500 dark:text-sky-400"
+                ></i>
+                <span id="expand-label" class="tracking-wider">EXPAND ALL</span>
+                    </button>
+                </div>
+
+                <!-- Stacks List -->
+                <div class="space-y-4" id="stack-container"></div>
+            </div>
+
+            <!-- Per-Project Git Push / Remote Modal -->
+            <div id="git-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+                <div class="card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-lg p-6 shadow-2xl space-y-4 text-slate-800 dark:text-slate-100">
+                    <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+                        <div class="flex items-center space-x-2">
+                            <i class="fa-brands fa-github text-sky-500 text-lg"></i>
+                            <div>
+                                <h3 id="git-modal-stack-name" class="font-bold text-sm text-slate-900 dark:text-white">
+                                    Git Sync Project
+                                </h3>
+                                <p id="git-modal-path" class="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate max-w-xs"></p>
+                            </div>
+                        </div>
+                        <button onclick="closeGitModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white text-sm">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+                    </div>
+
+                    <div class="space-y-4">
+                        <!-- Section 1: Remote Repository Origin -->
+                        <div class="card-inner p-3.5 space-y-2">
+                            <label class="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+                              Remote Repository Origin (URL GitHub)
+                            </label>
+
+                            <div class="flex items-center gap-2">
+                                <!-- Container Pembungkus Input URL -->
+                                <div class="flex-1 flex items-center rounded-xl border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 focus-within:border-sky-500 dark:focus-within:border-sky-400 focus-within:ring-2 focus-within:ring-sky-500/20 transition-all duration-200 h-10 px-3">
+                                    <i class="fa-solid fa-link text-xs text-slate-400 dark:text-slate-500 pr-2 shrink-0"></i>
+                                    <input type="text" id="git-remote-url" placeholder="https://github.com/username/repo.git" class="w-full bg-transparent text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 text-xs sm:text-sm font-semibold outline-none border-none p-0 focus:ring-0 font-mono"
+                                    />
+                                </div>
+                                <!-- Tombol Simpan Remote Terpisah di Samping Input -->
+                                <button onclick="updateGitRemote()" class="px-3.5 h-10 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-sky-600 dark:text-sky-400 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 shrink-0 transition">
+                                  Simpan Remote
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">Pesan Commit</label
+                  >
+
+                <!-- Container Pembungkus Input (Disamakan dengan Remote URL & Search Bar) -->
+                  <div class="mt-1.5 flex items-center rounded-xl border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 focus-within:border-sky-500 dark:focus-within:border-sky-400 focus-within:ring-2 focus-within:ring-sky-500/20 transition-all duration-200 h-10 px-3">
+                    <i class="fa-solid fa-pen text-xs text-slate-400 dark:text-slate-500 pr-2 shrink-0"></i>
+                <input
+                      type="text"
+                      id="git-commit-msg"
+                      value="Update project via Dashboard"
+                      class="w-full bg-transparent text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 text-xs sm:text-sm font-semibold outline-none border-none p-0 focus:ring-0"
+                    />
+                </div>
+                <pre
+                  id="git-output-log"
+                  class="p-3 text-[11px] font-mono card-inner text-emerald-600 dark:text-emerald-400 hidden max-h-40 overflow-y-auto whitespace-pre-wrap"
+                ></pre>
+              </div>
+
+              <div class="flex items-center justify-between pt-2">
+                <button
+                  onclick="executeGitAction('pull')"
+                  class="px-3.5 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-xs font-bold rounded-xl text-slate-700 dark:text-slate-300 transition flex items-center gap-1.5"
+                >
+                  <i class="fa-solid fa-download text-sky-500"></i>
+                  <span>Git Pull</span>
+                </button>
+
+                <div class="flex space-x-2">
+                  <button
+                    onclick="closeGitModal()"
+                    class="px-4 py-2 bg-slate-200 dark:bg-slate-800 text-xs font-bold rounded-xl text-slate-700 dark:text-slate-300"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    onclick="executeGitAction('push')"
+                    class="px-4 py-2 bg-sky-500 hover:bg-sky-400 text-white dark:text-slate-950 font-bold text-xs rounded-xl transition flex items-center gap-1.5"
+                  >
+                    <i class="fa-solid fa-upload"></i>
+                    <span>Commit & Push</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tunnel Modal & Terminal Modal -->
+          <div
+            id="tunnel-modal"
+            class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4"
+          >
+            <div
+              class="card bg-white dark:bg-slate-900 border border-amber-500/30 w-full max-w-md p-6 shadow-2xl space-y-4 text-slate-800 dark:text-slate-100"
+            >
+              <div
+                class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3"
+              >
+                <div class="flex items-center space-x-2">
+                  <i
+                    class="fa-solid fa-globe text-amber-500 dark:text-amber-400 text-lg"
+                  ></i>
+                  <h3
+                    id="tunnel-modal-title"
+                    class="font-bold text-sm text-slate-900 dark:text-white"
+                  >
+                    Public Tunnel Launcher
+                  </h3>
+                </div>
+                <button
+                  onclick="closeTunnelModal()"
+                  class="text-slate-400 hover:text-slate-600 dark:hover:text-white text-sm"
+                >
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+              <div class="space-y-3">
+                <p class="text-xs text-slate-500 dark:text-slate-400">
+                  URL Publik Cloudflare untuk container ini:
+                </p>
+                <div
+                  class="card-inner p-3 flex items-center justify-between gap-2"
+                >
+                  <span
+                    id="modal-tunnel-url"
+                    class="font-mono text-xs font-bold text-amber-600 dark:text-amber-300 truncate"
+                    >Menghubungkan tunnel...</span
+                  >
+                  <button
+                    onclick="copyModalURL()"
+                    class="text-xs bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 px-2.5 py-1 rounded-lg hover:bg-amber-500/30 shrink-0"
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+              <div class="flex items-center justify-between pt-2">
+                <button
+                  onclick="stopActiveTunnel()"
+                  class="px-3 py-2 bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/40 text-xs font-bold rounded-xl hover:bg-rose-500/30"
+                >
+                  Stop Tunnel
+                </button>
+                <a
+                  id="modal-tunnel-link"
+                  href="#"
+                  target="_blank"
+                  class="px-4 py-2 bg-amber-500 text-slate-950 font-bold text-xs rounded-xl hover:bg-amber-400 flex items-center gap-1.5"
+                >
+                  <span>Buka Link</span
+                  ><i
+                    class="fa-solid fa-arrow-up-right-from-square text-[10px]"
+                  ></i>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div
+            id="logs-modal"
+            class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4"
+          >
+            <div
+              class="card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[80vh]"
+            >
+              <div
+                class="bg-slate-100 dark:bg-slate-900 px-5 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4"
+              >
+                <div class="flex items-center space-x-2 shrink-0">
+                  <i
+                    class="fa-solid fa-terminal text-sky-500 dark:text-sky-400 text-sm"
+                  ></i>
+                  <span
+                    id="modal-title"
+                    class="font-mono text-xs font-bold text-slate-700 dark:text-slate-300"
+                    >Container Logs</span
+                  >
+                </div>
+                <div class="flex items-center space-x-2 flex-1 justify-end">
+                  <input
+                    type="text"
+                    id="log-search-input"
+                    oninput="filterLogs()"
+                    placeholder="Filter logs..."
+                    class="app-input px-3 py-1 text-xs w-44 md:w-64 font-mono"
+                  />
+                  <button
+                    onclick="copyLogContent()"
+                    class="px-2.5 py-1 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-xs font-mono rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+                    title="Copy All Logs"
+                  >
+                    <i class="fa-solid fa-copy"></i>
+                  </button>
+                  <button
+                    onclick="closeLogsModal()"
+                    class="text-slate-400 hover:text-slate-600 dark:hover:text-white text-sm"
+                  >
+                    <i class="fa-solid fa-xmark"></i>
+                  </button>
+                </div>
+              </div>
+              <pre
+                id="modal-logs-body"
+                class="p-5 font-mono text-xs text-emerald-600 dark:text-emerald-400 card-inner rounded-none border-none overflow-y-auto flex-1 leading-relaxed whitespace-pre-wrap"
+              >
+Memuat logs...</pre
+              >
+            </div>
+          </div>
+
+          <script>
+            const openCards = {};
+            let globalStacksData = {};
+            let activeTunnelName = "";
+            let activeTunnelInterval = null;
+            let activeTunnelsMap = {};
+            let currentModalURL = "";
+            let selectedChip = "ALL";
+            let isAllExpanded = false;
+            let refreshTimer = null;
+            let rawLogText = "";
+            let activeGitPath = "";
+            let activeGitStackName = "";
+
+            function initTheme() {
+              const savedTheme = localStorage.getItem("theme");
+              if (savedTheme === "light") {
+                document.documentElement.classList.remove("dark");
+                updateThemeIcon(false);
+              } else {
+                document.documentElement.classList.add("dark");
+                updateThemeIcon(true);
+              }
+            }
+
+            function toggleTheme() {
+              const isDark = document.documentElement.classList.toggle("dark");
+              localStorage.setItem("theme", isDark ? "dark" : "light");
+              updateThemeIcon(isDark);
+            }
+
+            function updateThemeIcon(isDark) {
+              const icon = document.getElementById("theme-icon");
+              icon.className = isDark
+                ? "fa-solid fa-sun text-amber-400 text-sm"
+                : "fa-solid fa-moon text-slate-700 text-sm";
+            }
+
+            async function fetchStatus() {
+              try {
+                const res = await fetch("/api/status");
+                const data = await res.json();
+
+                document.getElementById("stat-running").innerText =
+                  data.totalRunning || 0;
+                document.getElementById("stat-stacks").innerText = Object.keys(
+                  data.stacks || {},
+                ).length;
+                document.getElementById("stat-cpu").innerText =
+                  data.cpuUsage || "0%";
+                document.getElementById("stat-mem").innerText =
+                  data.memUsage || "0 MB / 0 MB";
+
+                document.getElementById("cpu-bar").style.width =
+                  `${Math.min(parseFloat(data.cpuUsage) || 0, 100)}%`;
+                document.getElementById("ram-bar").style.width =
+                  `${Math.min(parseFloat(data.memPercent) || 0, 100)}%`;
+
+                globalStacksData = data.stacks || {};
+                renderQuickFilterChips();
+                filterStacks();
+                updateGitHubOverview();
+              } catch (err) {
+                console.error("Gagal mengambil data status:", err);
+              }
+            }
+
+            function toggleAutoRefresh() {
+              const isChecked = document.getElementById(
+                "auto-refresh-toggle",
+              ).checked;
+              if (isChecked) {
+                if (!refreshTimer)
+                  refreshTimer = setInterval(fetchStatus, 3000);
+              } else if (refreshTimer) {
+                clearInterval(refreshTimer);
+                refreshTimer = null;
+              }
+            }
+
+            function renderQuickFilterChips() {
+              const chipContainer =
+                document.getElementById("quick-filter-chips");
+              const keys = Object.keys(globalStacksData);
+
+              let html = `
+          <button onclick="setFilterChip('ALL')" class="px-3 py-1 rounded-xl text-xs font-mono font-bold border transition ${
+            selectedChip === "ALL"
+              ? "bg-sky-500 text-white dark:text-slate-950 border-sky-400 shadow-md shadow-sky-500/20"
+              : "card text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+          }">
+            ALL (${keys.length})
+          </button>
+        `;
+
+              keys.forEach((k) => {
+                const isSelected =
+                  selectedChip.toLowerCase() === k.toLowerCase();
+                html += `
+            <button onclick="setFilterChip('${k}')" class="px-3 py-1 rounded-xl text-xs font-mono font-bold border transition ${
+              isSelected
+                ? "bg-sky-500 text-white dark:text-slate-950 border-sky-400 shadow-md shadow-sky-500/20"
+                : "card text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+            }">
+              ${k.toUpperCase()}
+            </button>
+          `;
+              });
+
+              chipContainer.innerHTML = html;
+            }
+
+            function setFilterChip(chipKey) {
+              selectedChip = chipKey;
+              clearSearch();
+              renderQuickFilterChips();
+              filterStacks();
+              updateGitHubOverview();
+            }
+
+            function updateGitHubOverview() {
+              const activeTag = document.getElementById("gh-active-stack");
+              const commitText = document.getElementById("gh-last-commit");
+              const dateTag = document.getElementById("gh-last-date");
+
+              if (selectedChip === "ALL") {
+                activeTag.innerText = "ALL PROJECTS";
+                commitText.innerText =
+                  "Pilih salah satu filter stack di atas untuk melihat status Git mendalam.";
+                dateTag.innerText =
+                  "Total: " + Object.keys(globalStacksData).length + " Stacks";
+                return;
+              }
+
+              const stack = globalStacksData[selectedChip.toLowerCase()];
+              if (stack && stack.gitInfo) {
+                activeTag.innerText = stack.name;
+                commitText.innerText = `${stack.gitInfo.lastCommit} [${stack.gitInfo.branch}]`;
+                dateTag.innerText = `Update: ${stack.gitInfo.commitDate}`;
+              }
+            }
+
+            /* LOGIKA SEARCH BAR TERBARU */
+            function handleSearchInput() {
+              const input = document.getElementById("search-input");
+              const clearBtn = document.getElementById("clear-search-btn");
+
+              if (input.value.length > 0) {
+                clearBtn.classList.remove("hidden");
+              } else {
+                clearBtn.classList.add("hidden");
+              }
+
+              filterStacks();
+            }
+
+            function clearSearch() {
+              const input = document.getElementById("search-input");
+              input.value = "";
+              handleSearchInput();
+            }
+
+            function filterStacks() {
+              const q = document
+                .getElementById("search-input")
+                .value.toLowerCase();
+              const filtered = {};
+
+              Object.keys(globalStacksData).forEach((prefix) => {
+                const stack = globalStacksData[prefix];
+
+                if (
+                  selectedChip !== "ALL" &&
+                  prefix.toLowerCase() !== selectedChip.toLowerCase()
+                ) {
+                  return;
+                }
+
+                if (q) {
+                  const matchStack =
+                    stack.name.toLowerCase().includes(q) ||
+                    prefix.toLowerCase().includes(q);
+                  const matchContainer = stack.containers.some((c) =>
+                    c.name.toLowerCase().includes(q),
+                  );
+                  if (!matchStack && !matchContainer) return;
+                }
+
+                filtered[prefix] = stack;
+              });
+
+              renderStacks(filtered);
+            }
+
+            function toggleCollapse(prefix) {
+              openCards[prefix] = !(openCards[prefix] ?? isAllExpanded);
+              renderStacks(globalStacksData);
+            }
+
+            function toggleExpandAll() {
+              isAllExpanded = !isAllExpanded;
+              Object.keys(globalStacksData).forEach((k) => {
+                openCards[k] = isAllExpanded;
+              });
+              document.getElementById("expand-label").innerText = isAllExpanded
+                ? "COLLAPSE ALL"
+                : "EXPAND ALL";
+              filterStacks();
+            }
+
+            function getTechIcon(name) {
+              const lower = name.toLowerCase();
+              if (lower.includes("pma") || lower.includes("phpmyadmin"))
+                return '<i class="fa-solid fa-database text-amber-500 dark:text-amber-400"></i>';
+              if (
+                lower.includes("mysql") ||
+                lower.includes("postgres") ||
+                lower.includes("db")
+              )
+                return '<i class="fa-solid fa-server text-sky-500 dark:text-sky-400"></i>';
+              if (
+                lower.includes("app") ||
+                lower.includes("web") ||
+                lower.includes("laravel")
+              )
+                return '<i class="fa-solid fa-globe text-emerald-500 dark:text-emerald-400"></i>';
+              return '<i class="fa-solid fa-cube text-slate-400"></i>';
+            }
+
+            function renderStacks(stacks) {
+              const container = document.getElementById("stack-container");
+              const keys = Object.keys(stacks);
+
+              if (keys.length === 0) {
+                container.innerHTML = `<div class="p-8 text-center card text-slate-500 text-xs">Tidak ada stack atau container yang cocok.</div>`;
+                return;
+              }
+
+              container.innerHTML = keys
+                .map((prefix) => {
+                  const stack = stacks[prefix];
+                  const isActive = stack.isRunning;
+                  const isOpen = openCards[prefix] ?? isAllExpanded;
+
+                  const subContainersHTML = stack.containers
+                    .map((c) => {
+                      const icon = getTechIcon(c.name);
+                      const portsHTML =
+                        c.ports.length > 0
+                          ? c.ports
+                              .map((p) => {
+                                const tunnelKey = `${c.name}-${p}`;
+                                const isTunnelActive =
+                                  activeTunnelsMap[tunnelKey]?.url;
+
+                                return `
+                <div class="flex items-center space-x-1">
+                  <a href="http://localhost:${p}" target="_blank" onclick="event.stopPropagation()" class="px-2.5 py-1 bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 rounded-lg text-xs font-mono border border-sky-500/30 flex items-center space-x-1 transition">
+                    <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+                    <span>:${p}</span>
+                  </a>
+                  ${
+                    isTunnelActive
+                      ? `
+                    <button onclick="copyTunnelDirect('${tunnelKey}')" class="px-2 py-1 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 rounded-lg text-xs font-mono font-bold flex items-center gap-1 animate-pulse" title="Copy URL Tunnel">
+                      <i class="fa-solid fa-link text-[10px]"></i><span>Active</span>
+                    </button>
+                  `
+                      : `
+                    <button onclick="launchTunnel('${c.name}', '${p}')" class="px-2 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 rounded-lg text-xs font-mono font-bold flex items-center gap-1 transition" title="Bikin Tunnel Publik">
+                      <i class="fa-solid fa-globe text-[10px]"></i><span>Tunnel</span>
+                    </button>
+                  `
+                  }
+                </div>
+              `;
+                              })
+                              .join("")
+                          : `<span class="text-[11px] text-slate-400 dark:text-slate-500 font-mono">No Port</span>`;
+
+                      return `
+              <div class="flex items-center justify-between card-inner px-4 py-3 hover:border-slate-300 dark:hover:border-slate-700 transition">
+                <div class="flex items-center space-x-3 truncate">
+                  <span class="w-2.5 h-2.5 rounded-full ${c.isRunning ? "bg-emerald-500 dark:bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" : "bg-slate-400 dark:bg-slate-600"}"></span>
+                  ${icon}
+                  <span class="font-mono text-xs ${c.isRunning ? "text-slate-800 dark:text-slate-200 font-semibold" : "text-slate-500 dark:text-slate-400"} truncate">${c.name}</span>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                  ${portsHTML}
+                  <div class="flex items-center bg-slate-200/80 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-300 dark:border-slate-700">
+                    <button onclick="singleContainerAction('${c.name}', '${c.isRunning ? "stop" : "start"}')" class="px-2 py-1 text-[10px] font-bold rounded-md transition ${c.isRunning ? "text-rose-500 hover:bg-rose-500/20" : "text-emerald-500 hover:bg-emerald-500/20"}" title="${c.isRunning ? "Stop" : "Start"}">
+                      <i class="fa-solid ${c.isRunning ? "fa-power-off" : "fa-play"}"></i>
+                    </button>
+                    <button onclick="singleContainerAction('${c.name}', 'restart')" class="px-2 py-1 text-[10px] text-sky-500 hover:bg-sky-500/20 rounded-md transition" title="Restart">
+                      <i class="fa-solid fa-rotate"></i>
+                    </button>
+                    <button onclick="deleteContainer('${c.name}')" class="px-2 py-1 text-[10px] text-rose-500 hover:bg-rose-500/30 rounded-md transition" title="Hapus Permanent">
+                      <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                  </div>
+
+                  <button onclick="openLogs('${c.name}')" class="px-2.5 py-1 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-mono rounded-lg border border-slate-300 dark:border-slate-700 transition" title="Lihat Logs">
+                    <i class="fa-solid fa-terminal text-[10px]"></i>
+                  </button>
+                </div>
+              </div>
+            `;
+                    })
+                    .join("");
+
+                  return `
+            <div class="card overflow-hidden ${isActive ? "border-emerald-500/40" : ""}">
+              <div onclick="toggleCollapse('${prefix}')" class="p-5 flex items-center justify-between cursor-pointer hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition">
+                <div class="flex items-center space-x-4">
+                  <div class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex items-center justify-center">
+                    <i class="fa-solid fa-chevron-down text-slate-400 text-xs transition-transform duration-200 ${isOpen ? "rotate-180" : ""}"></i>
+                  </div>
+                  <div>
+                    <div class="flex items-center space-x-3">
+                      <h3 class="font-black text-lg text-slate-900 dark:text-white tracking-wide">${stack.name}</h3>
+                      <span class="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase ${isActive ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30" : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30"}">
+                        ${isActive ? "RUNNING" : "STOPPED"}
+                      </span>
+                    </div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">${stack.containers.length} sub-containers attached</p>
+                  </div>
+                </div>
+
+                <div class="flex items-center space-x-2" onclick="event.stopPropagation()">
+                  <button onclick="openGitModal('${stack.name}', '${stack.workingDir || ""}', '${stack.gitInfo?.repoUrl || ""}')" class="px-3.5 py-2.5 card hover:bg-slate-100 dark:hover:bg-slate-800 text-sky-600 dark:text-sky-400 text-xs font-bold transition active:scale-95 flex items-center gap-2 shadow-sm" title="Manage Git Repo">
+                    <i class="fa-brands fa-github text-sm"></i>
+                    <span>Git Sync</span>
+                  </button>
+
+                  <button onclick="toggleStack('${prefix}', '${isActive ? "stop" : "start"}')" class="px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all shadow-md active:scale-95 flex items-center gap-2 ${isActive ? "bg-rose-600 hover:bg-rose-700 text-white" : "bg-emerald-600 hover:bg-emerald-700 text-white"}">
+                    <i class="fa-solid ${isActive ? "fa-power-off" : "fa-play"}"></i>
+                    <span>${isActive ? "STOP STACK" : "START STACK"}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="${isOpen ? "block" : "hidden"} border-t border-slate-200 dark:border-slate-800/80 p-4 bg-slate-50/50 dark:bg-slate-950/20 space-y-2.5">
+                ${subContainersHTML}
+              </div>
+            </div>
+          `;
+                })
+                .join("");
+            }
+
+            async function singleContainerAction(containerName, action) {
+              await fetch("/api/container/action", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ containerName, action }),
+              });
+              fetchStatus();
+            }
+
+            async function deleteContainer(containerName) {
+              if (
+                confirm(`Hapus container "${containerName}" secara permanen?`)
+              ) {
+                await singleContainerAction(containerName, "remove");
+                fetchStatus();
+              }
+            }
+
+            function openGitModal(stackName, path, repoUrl = "") {
+              activeGitPath = path;
+              activeGitStackName = stackName;
+              document.getElementById("git-modal-stack-name").innerText =
+                `Git Sync: ${stackName}`;
+              document.getElementById("git-modal-path").innerText = path
+                ? `Path: ${path}`
+                : "Path default server";
+              document.getElementById("git-remote-url").value =
+                repoUrl && repoUrl !== "Belum set remote origin" ? repoUrl : "";
+              document.getElementById("git-commit-msg").value =
+                `Update ${stackName} via Dashboard`;
+              document.getElementById("git-output-log").classList.add("hidden");
+              document.getElementById("git-modal").classList.remove("hidden");
+            }
+
+            function openCurrentGitModal() {
+              let stackKey = selectedChip.toLowerCase();
+
+              if (selectedChip === "ALL") {
+                const keys = Object.keys(globalStacksData);
+                if (keys.length === 0) {
+                  alert("Belum ada Stack Docker yang terdeteksi.");
+                  return;
+                }
+                stackKey = keys[0];
+              }
+
+              const stack = globalStacksData[stackKey];
+              if (stack) {
+                openGitModal(
+                  stack.name,
+                  stack.workingDir,
+                  stack.gitInfo?.repoUrl,
+                );
+              }
+            }
+
+            function closeGitModal() {
+              document.getElementById("git-modal").classList.add("hidden");
+            }
+
+            async function updateGitRemote() {
+              const remoteUrl = document
+                .getElementById("git-remote-url")
+                .value.trim();
+              const logBox = document.getElementById("git-output-log");
+              logBox.classList.remove("hidden");
+              logBox.innerText = "Memperbarui remote repository URL...";
+
+              try {
+                const res = await fetch("/api/git/action", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    projectPath: activeGitPath,
+                    action: "set_remote",
+                    remoteUrl: remoteUrl,
+                  }),
+                });
+                const data = await res.json();
+                logBox.innerText = res.ok
+                  ? data.message
+                  : `Gagal: ${data.detail}`;
+                fetchStatus();
+              } catch (e) {
+                logBox.innerText = `Error: ${e.message}`;
+              }
+            }
+
+            async function executeGitAction(actionType = "push") {
+              const commitMsg = document.getElementById("git-commit-msg").value;
+              const logBox = document.getElementById("git-output-log");
+              logBox.classList.remove("hidden");
+              logBox.innerText =
+                actionType === "pull"
+                  ? "Mengambil update terbaru dari GitHub..."
+                  : "Menjalankan git commit & push...";
+
+              try {
+                const res = await fetch("/api/git/action", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    projectPath: activeGitPath,
+                    commitMessage: commitMsg,
+                    action: actionType,
+                  }),
+                });
+                const data = await res.json();
+                logBox.innerText = res.ok
+                  ? `${data.message}\n\n${data.output || ""}`
+                  : `Gagal: ${data.detail || "Terjadi kesalahan"}`;
+                fetchStatus();
+              } catch (e) {
+                logBox.innerText = `Error: ${e.message}`;
+              }
+            }
+
+            async function launchTunnel(containerName, port) {
+              activeTunnelName = `tunnel-${containerName}-${port}`;
+              document.getElementById("tunnel-modal-title").innerText =
+                `Tunnel: ${containerName} (:${port})`;
+              document.getElementById("modal-tunnel-url").innerText =
+                "Menyalakan Cloudflare Tunnel...";
+              document
+                .getElementById("tunnel-modal")
+                .classList.remove("hidden");
+
+              await fetch("/api/tunnel/start", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ containerName, port }),
+              });
+              if (activeTunnelInterval) clearInterval(activeTunnelInterval);
+              activeTunnelInterval = setInterval(pollTunnelURL, 1500);
+            }
+
+            async function pollTunnelURL() {
+              if (!activeTunnelName) return;
+              const res = await fetch(`/api/tunnel/url/${activeTunnelName}`);
+              const data = await res.json();
+              if (data.url) {
+                currentModalURL = data.url;
+                const key = activeTunnelName.replace("tunnel-", "");
+                activeTunnelsMap[key] = { url: data.url };
+                document.getElementById("modal-tunnel-url").innerText =
+                  data.url;
+                document.getElementById("modal-tunnel-link").href = data.url;
+                clearInterval(activeTunnelInterval);
+                renderStacks(globalStacksData);
+              }
+            }
+
+            function copyTunnelDirect(key) {
+              const url = activeTunnelsMap[key]?.url;
+              if (url) {
+                navigator.clipboard.writeText(url);
+                alert(`URL Tunnel disalin:\n${url}`);
+              }
+            }
+
+            async function stopActiveTunnel() {
+              if (activeTunnelName) {
+                await fetch("/api/tunnel/stop", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ tunnelName: activeTunnelName }),
+                });
+                delete activeTunnelsMap[
+                  activeTunnelName.replace("tunnel-", "")
+                ];
+                closeTunnelModal();
+                renderStacks(globalStacksData);
+              }
+            }
+
+            function copyModalURL() {
+              if (currentModalURL) {
+                navigator.clipboard.writeText(currentModalURL);
+                alert("URL Tunnel disalin!");
+              }
+            }
+
+            function closeTunnelModal() {
+              if (activeTunnelInterval) clearInterval(activeTunnelInterval);
+              document.getElementById("tunnel-modal").classList.add("hidden");
+            }
+
+            async function toggleStack(prefix, action) {
+              await fetch("/api/toggle", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ prefix, action }),
+              });
+              fetchStatus();
+            }
+
+            async function stopAll() {
+              if (confirm("Matikan seluruh container?")) {
+                await fetch("/api/toggle", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ action: "stop_all" }),
+                });
+                fetchStatus();
+              }
+            }
+
+            async function openLogs(containerName) {
+              document.getElementById("modal-title").innerText =
+                `Logs: ${containerName}`;
+              document.getElementById("log-search-input").value = "";
+              document.getElementById("modal-logs-body").innerText =
+                "Memuat logs...";
+              document.getElementById("logs-modal").classList.remove("hidden");
+
+              const res = await fetch(`/api/logs/${containerName}`);
+              const data = await res.json();
+              rawLogText = data.logs || "Tidak ada log yang tersedia.";
+              document.getElementById("modal-logs-body").innerText = rawLogText;
+            }
+
+            function filterLogs() {
+              const q = document
+                .getElementById("log-search-input")
+                .value.toLowerCase();
+              if (!q) {
+                document.getElementById("modal-logs-body").innerText =
+                  rawLogText;
+                return;
+              }
+              document.getElementById("modal-logs-body").innerText =
+                rawLogText
+                  .split("\n")
+                  .filter((l) => l.toLowerCase().includes(q))
+                  .join("\n") || "Tidak ada log yang cocok.";
+            }
+
+            function copyLogContent() {
+              if (rawLogText) {
+                navigator.clipboard.writeText(rawLogText);
+                alert("Seluruh log disalin!");
+              }
+            }
+
+            function closeLogsModal() {
+              document.getElementById("logs-modal").classList.add("hidden");
+            }
+
+            initTheme();
+            fetchStatus();
+            toggleAutoRefresh();
+          </script>
+        </body>
+      </html>
+    </div>
+  </div>
+</div>

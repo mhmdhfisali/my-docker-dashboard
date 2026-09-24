@@ -1,0 +1,24 @@
+# Python Virtual Environment
+venv/
+.venv/
+env/
+
+# Python Cache & Compiled Files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Config & Cache Tools
+.streamlit/
+.agents/
+
+# Environment Variables & Secrets
+.env
+*.env
+
+# IDE & Code Editor Settings
+.vscode/
+.idea/
+
+# Log Files
+*.log
